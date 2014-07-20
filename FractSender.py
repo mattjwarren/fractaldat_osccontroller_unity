@@ -16,9 +16,7 @@ import datetime
 Coord=namedtuple('Coord','x y')
 
 class Grid(object):
-    '''grid handedness, 0,0=topleft  max,max=bottom right
-    this class is currently confused as to wether it should generate rectangular grids
-    as well as square grids... possibly the root of some coupling with FractalHeightmap()'''    
+    '''grid handedness, 0,0=topleft  max,max=bottom right'''    
 
     def __init__(self,x,y):
         self.size_x=x
@@ -29,14 +27,7 @@ class Grid(object):
         for row in self.data:
             print [ int(round(n)) for n in row ]
         
-    def subgrid(self,corners):
-        tl,tr,bl,br=corners
-        subgrid=Grid(tr.x-tl.x,bl.y-tl.y)
-        for sg_y,y in enumerate(xrange(tl.y,bl.y+1)):
-            for sg_x,x in enumerate(xrange(tl.x,tr.x+1)):
-                subgrid.make(Coord(sg_x,sg_y),self.data[x,y])
-        return subgrid
-        
+    
     def _render_to_colormap(self):
         #normalises the data first, which is a shame
         plt.imshow(self.data, interpolation='nearest',cmap=cm.gist_rainbow)
@@ -52,11 +43,6 @@ class Grid(object):
     def make(self,coordinate,value):#make? ino rite?
         self.data[coordinate.x][coordinate.y]=value
             
-            
-            
-            #we dont need get
-            # OR MAKE! YOU FOOL! just access self.data, it's public
-            #  but.. Coord()
     def get(self,coordinate):
         return self.data[coordinate.x][coordinate.y]
     
@@ -80,22 +66,16 @@ class FractalHeightmap(object):
                                 )
 
     #currently performs centered subgrid zoom, subgrid size expressed as percentage
-    def zoom(self,subgrid_size):
-        #calculate subgrid and grab it
-        sg_width=int(round(self.grid.size_x*subgrid_size))
-        sg_height=int(round(self.grid.size_y*subgrid_size))
-        sg_x_off=int(round(self.grid.size_x-sg_width)/2.0)
-        sg_y_off=int(round(self.grid.size_y-sg_height)/2.0)
-                      
-        sg_tl=Coord(sg_x_off,sg_y_off)
-        sg_tr=Coord(self.grid.size_x-sg_x_off,sg_y_off)
-        sg_bl=Coord(sg_x_off,self.grid.size_y-sg_y_off)
-        sg_br=Coord(self.grid_size_x-sg_x_off,self.grid_size_y-sg_y_off)
-        
-        corners=(sg_tl,sg_tr,sg_bl,sg_br)
-        subgrid=self.grid.subgrid(corners)
-        
-        
+#     def zoom(self,subgrid_size):
+#         sg_width=int(round(self.grid.size_x*subgrid_size))
+#         sg_height=int(round(self.grid.size_y*subgrid_size))
+#         sg_x_off=int(round(self.grid.size_x-sg_width)/2.0
+#         sg_y_off=int(round(self.grid.size_y-sg_height)/2.0
+#                      
+#         sg_tl=Coord(sg_x_off,sg_y_off)
+#         sg_tr=Coord(self.grid.size_x-sg_x_off,sg_y_off)
+#         sg_bl=Coord(sg_x_off,self.grid.size_y-sg_y_o)
+#         sg_br=
         
 
     def _set_initial_corners(self,corner_seed_ranges):
@@ -204,8 +184,8 @@ if __name__ == '__main__':
         #init
         start=datetime.datetime.now()
         g=Grid(g_size+1,g_size+1)
-        f.zoom(0.9)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
-                    #base grid with gaps generated fractally from the points that did exist 
+        f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))
+        #f.zoom(0.9)#parameter is fractional size of centered subgrid to zoom into
         #calc
         for y in xrange(0,f.grid.size_y-1):
             for x in xrange(0,f.grid.size_x-1):
