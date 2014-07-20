@@ -95,8 +95,6 @@ class FractalHeightmap(object):
         corners=(sg_tl,sg_tr,sg_bl,sg_br)
         subgrid=self.grid.subgrid(corners)
         
-        
-        
 
     def _set_initial_corners(self,corner_seed_ranges):
         tl,tr,bl,br=corner_seed_ranges
