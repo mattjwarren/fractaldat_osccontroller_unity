@@ -95,6 +95,9 @@ class FractalHeightmap(object):
         corners=(sg_tl,sg_tr,sg_bl,sg_br)
         subgrid=self.grid.subgrid(corners)
         
+        #explode-scale subgrid into new full size grid
+        
+        
 
     def _set_initial_corners(self,corner_seed_ranges):
         tl,tr,bl,br=corner_seed_ranges
@@ -182,6 +185,8 @@ class FractalHeightmap(object):
 
 
 if __name__ == '__main__':
+    #TESTPROG
+    
     
     #g_size is the length of a side of a square grid
     g_size=16#//must(n't) be a power of 2  ((non powers of two do work.  number 8 doesnt)

@@ -53,7 +53,7 @@ class FractalHeightmap(object):
                  ## the numbers in corner_seed_ranges specify the range of numbers each corner can take
                  ## when the drid is first initialised
                  ##  *you can change these* 
-                 corner_seed_ranges=[(20,80),(20,80),(20,80),(20,80)],
+                 corner_seed_ranges=[(50,60),(70,99),(10,30),(75,80)],
                  max_depth=3):
         self.grid=grid
         self.max_depth=max_depth
@@ -170,8 +170,8 @@ if __name__ == '__main__':
     
     #roughness,  low values make smooth landscapes, high values rough landscapes
     #'noraml' range from 1.0 to 10.0
-    roughness=7.0
-    target_rate=50 #OSC Messages sent per second
+    roughness=5.0
+    target_rate=75 #OSC Messages sent per second
     
     test_ip=IPAddr('77.101.65.99',8002)
     emitter=OSCSender('/test',test_ip)
