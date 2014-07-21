@@ -4,7 +4,7 @@ Created on 18 Jul 2014
 @author: matthew
 '''
             
-
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from math import sqrt
@@ -32,9 +32,11 @@ class Grid(object):
     def subgrid(self,corners):
         tl,tr,bl,br=corners
         subgrid=Grid(tr.x-tl.x,bl.y-tl.y)
-        for sg_y,y in enumerate(xrange(tl.y,bl.y+1)):
-            for sg_x,x in enumerate(xrange(tl.x,tr.x+1)):
-                subgrid.make(Coord(sg_x,sg_y),self.data[x,y])
+        for sg_y,y in enumerate(xrange(tl.y,bl.y)):
+            for sg_x,x in enumerate(xrange(tl.x,tr.x)):
+                #print 'sg_x,y=',sg_x,sg_y
+                subgrid.make(Coord(sg_x,sg_y),self.data[x][y])
+
         return subgrid
         
     def _render_to_colormap(self):
@@ -50,6 +52,7 @@ class Grid(object):
         self._render_to_text()
         
     def make(self,coordinate,value):#make? ino rite?
+        #print 'making',coordinate.x,coordinate.y
         self.data[coordinate.x][coordinate.y]=value
             
             
@@ -67,7 +70,7 @@ class FractalHeightmap(object):
                  ## the numbers in corner_seed_ranges specify the range of numbers each corner can take
                  ## when the drid is first initialised
                  ##  *you can change these* 
-                 corner_seed_ranges=[(20,80),(20,80),(20,80),(20,80)],
+                 corner_seed_ranges=[(10,50),(10,50),(10,50),(10,50)],
                  max_depth=3):
         self.grid=grid
         self.max_depth=max_depth
@@ -90,14 +93,27 @@ class FractalHeightmap(object):
         sg_tl=Coord(sg_x_off,sg_y_off)
         sg_tr=Coord(self.grid.size_x-sg_x_off,sg_y_off)
         sg_bl=Coord(sg_x_off,self.grid.size_y-sg_y_off)
-        sg_br=Coord(self.grid_size_x-sg_x_off,self.grid_size_y-sg_y_off)
+        sg_br=Coord(self.grid.size_x-sg_x_off,self.grid.size_y-sg_y_off)
         
         corners=(sg_tl,sg_tr,sg_bl,sg_br)
         subgrid=self.grid.subgrid(corners)
+        zoomed_grid=Grid(self.grid.size_x,self.grid.size_y)
+        step_x=zoomed_grid.size_x/float(subgrid.size_x)
+        step_y=zoomed_grid.size_y/float(subgrid.size_y)
         
         #explode-scale subgrid into new full size grid
-        
-        
+        for idx_y,sg_y in enumerate(xrange(0,subgrid.size_y)):
+            for idx_x,sg_x in enumerate(xrange(0,subgrid.size_x)):
+                zg_x=int(round(idx_x*step_x))
+                zg_y=int(round(idx_y*step_y))
+                zoomed_grid.data[zg_x][zg_y]=subgrid.data[sg_x][sg_y]
+                
+        self.grid=zoomed_grid
+        self.generate_heightmap([Coord(0,0),
+                                 Coord(self.grid.size_x-1,0),
+                                 Coord(0,self.grid.size_y-1),
+                                 Coord(self.grid.size_x-1,self.grid.size_y-1)],1
+                                )
 
     def _set_initial_corners(self,corner_seed_ranges):
         tl,tr,bl,br=corner_seed_ranges
@@ -193,21 +209,23 @@ if __name__ == '__main__':
     
     #roughness,  low values make smooth landscapes, high values rough landscapes
     #'noraml' range from 1.0 to 10.0
-    roughness=7.0
-    target_rate=50 #OSC Messages sent per second
+    roughness=10
+    target_rate=75 #OSC Messages sent per second
     
     test_ip=IPAddr('77.101.65.99',8002)
     emitter=OSCSender('/test',test_ip)
     
     sleep_time=(1000.0/target_rate)/1000.0
+    inter_grid_sleep=60
     g=Grid(g_size+1,g_size+1)
     f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
-    
+    #f.grid.render()
+    #ctr=1
     while True:
         #init
         start=datetime.datetime.now()
         g=Grid(g_size+1,g_size+1)
-        f.zoom(0.9)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
+        f.zoom(0.7)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
                     #base grid with gaps generated fractally from the points that did exist 
         #calc
         for y in xrange(0,f.grid.size_y-1):
@@ -218,8 +236,10 @@ if __name__ == '__main__':
                 emitter.send()
                 sleep(sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
         #render
-        #f.grid.render()
+        f.grid.render()
+        #ctr+=1
         ##
+        sleep(inter_grid_sleep)
         end=datetime.datetime.now()
         print '(estimated) Init+Calc+Send+Render time',end-start
         print '\n\n'
