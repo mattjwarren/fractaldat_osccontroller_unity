@@ -38,7 +38,7 @@ class basic_armor(object): #(armor interface)
         #TODO: ^^^^^That line needs improving...self
         self.condition=100  #             0-100 / general use condition. applicable any usable thing.
                             # 0=cant use irreparable,
-                            # 1=almost impossible repair
+                            # 5=almost impossible repair
                             # 10=very difficult specialist repair / requires large equiment+mats
                             # 25=very difficult skilled repair / not possible unskilled
                             # 35=almost impossible uksilled /  difficult skilled
@@ -48,6 +48,9 @@ class basic_armor(object): #(armor interface)
                             # 98-+1 shiny bonus. 
                             # 100=+1.5 shiny bonus
         self.penalties={'move':lambda m: m-(m*.2)} 
+        
+    def reduce(self,dict_of_tagged_functions):
+        
 
 class bare_hand(object): #could be used as base melle object interface
     

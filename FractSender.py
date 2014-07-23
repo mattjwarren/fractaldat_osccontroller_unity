@@ -38,10 +38,16 @@ class Grid(object):
                 subgrid.make(Coord(sg_x,sg_y),self.data[x][y])
 
         return subgrid
-        
+    
+    def _serialise(self):
+        return ( ( v for v in row ) for row in self._data )
+    
     def _render_to_colormap(self):
         #normalises the data first, which is a shame
-        plt.imshow(self.data, interpolation='nearest',cmap=cm.gist_rainbow)
+        vas=self._serialse()
+        val_min=max(vals)
+        val_max=min(vals)
+        plt.imshow(self.data, interpolation='nearest',vmin=val_min,vmax=val_max,cmap=cm.gist_rainbow)
         
         #this one averages by nearest neighbours, i think....
         #plt.imshow(self.data,cmap=cm.gist_rainbow)
@@ -225,8 +231,13 @@ if __name__ == '__main__':
         #init
         start=datetime.datetime.now()
         g=Grid(g_size+1,g_size+1)
-        f.zoom(0.7)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
+        
+        
+        #f.zoom(0.7)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
                     #base grid with gaps generated fractally from the points that did exist 
+        f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
+        
+        
         #calc
         for y in xrange(0,f.grid.size_y-1):
             for x in xrange(0,f.grid.size_x-1):

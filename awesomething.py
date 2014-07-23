@@ -45,7 +45,7 @@ class Grid(object):
         return subgrid
 
     def _serialise(self):
-        serial_data=[ v for row in self._data  for v in row  ] #return a new, not a reference.
+        serial_data=[ v for row in self._data  for v in row  ]
         return serial_data
 
     def _render_to_colormap(self):
@@ -83,7 +83,7 @@ class Grid(object):
         plt.show()
        
     def render(self):
-        self._render_to_colormap()
+        #self._render_to_colormap()
         self._render_to_text()
         
     def make(self,coordinate,value):#make? ino rite?
@@ -247,18 +247,18 @@ if __name__ == '__main__':
     
     
     #g_size is the length of a side of a square grid
-    g_size=32#//must(n't) be a power of 2  ((non powers of two do work.  number 8 doesnt)
+    g_size=16#//must(n't) be a power of 2  ((non powers of two do work.  number 8 doesnt)
     
     #roughness,  low values make smooth landscapes, high values rough landscapes for many interpretations of rough
     #'noraml' range from 1.0 to 10.0
-    roughness=13.3
+    roughness=10
     target_rate=75 #OSC Messages sent per second
     
     test_ip=IPAddr('77.101.65.99',8002)
     emitter=OSCSender('/test',test_ip)
     
     sleep_time=(1000.0/target_rate)/1000.0
-    inter_grid_sleep=0
+    inter_grid_sleep=20
     g=Grid(g_size+1,g_size+1)
     f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
     print 'STARTING GRID'
@@ -269,8 +269,8 @@ if __name__ == '__main__':
         #init
         start=datetime.datetime.now()
         g=Grid(g_size+1,g_size+1)
-        f.zoom(0.01)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
-                    #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
+        f.zoom(0.7)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
+                    #base grid with gaps generated fractally from the points that did exist 
         #f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
         #calc
         for y in xrange(0,f.grid.size_y-1):
@@ -286,5 +286,5 @@ if __name__ == '__main__':
         ##
         sleep(inter_grid_sleep)
         end=datetime.datetime.now()
-        print '(estimated) Init+Calc+Send+Render+grid_sleep time',end-start
+        print '(estimated) Init+Calc+Send+Render time',end-start
         print '\n\n'
