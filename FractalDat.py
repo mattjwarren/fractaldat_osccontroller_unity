@@ -5,6 +5,7 @@ Created on 18 Jul 2014
 '''
 from mpl_toolkits.mplot3d.axes3d import Axes3D        
 import numpy as np
+from scipy.interpolate import griddata
 from pylab import *
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -30,7 +31,7 @@ class Grid(object):
                       Coord(0,self.size_y-1),Coord(self.size_x-1,self.size_y-1))
         
         self._data=[ [0 for _ in xrange(x)] for _ in xrange(y) ]
-        
+                
     def _render_to_text(self):
         for row in self._data:
             print [ int(round(n)) for n in row ]
@@ -49,32 +50,28 @@ class Grid(object):
         return serial_data
 
     def _render_to_colormap(self):
-        vals=self._serialise()
-        val_min=min(vals)
-        val_max=max(vals)
-        print 'DEBUG: val_min,val_max=',val_min,val_max
-        plt.imshow(self._data, interpolation='nearest',vmin=val_min,vmax=val_max,cmap=cm.BrBG)
+        #vals=self._serialise()
+        #val_min=min(vals)
+        #val_max=max(vals)
+        #print 'DEBUG: val_min,val_max=',val_min,val_max
+        #plt.imshow(self._data, interpolation='nearest',vmin=val_min,vmax=val_max,cmap=cm.BrBG)
+        
+        
         
         #this one averages by nearest neighbours, i think....
         #plt.imshow(self.data,cmap=cm.gist_rainbow)
         
+        
         #plt.contour(self._data, cmap=cm.BrBG)
+        data = np.array(self._data)
+        length = data.shape[0]
+        width = data.shape[1]
+        x, y = np.meshgrid(np.arange(length), np.arange(width))
         
-        
-####        ###3d
-####        fig = plt.figure()
-####        
-####        # `ax` is a 3D-aware axis instance because of the projection='3d' keyword argument to add_subplot
-####        X,Y=meshgrid(range(0,self.size_x+1),range(0,self.size_y+1))
-####        Z=self._data
-####        ax = fig.add_subplot(1, 2, 1, projection='3d')
-####        
-####        p = ax.plot_surface(X, Y, Z, rstride=4, cstride=4, linewidth=0)
-####        # surface_plot with color grading and color bar
-####        ax = fig.add_subplot(1, 2, 2, projection='3d')
-####        p = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-####        cb = fig.colorbar(p, shrink=0.5)    
-        
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1, projection='3d')
+        ax.plot_surface(x, y, data)
+        plt.show()
         
         #this one averages by nearest neighbours, i think....
         #plt.imshow(self._data,cmap=cm.gist_rainbow)
@@ -83,7 +80,7 @@ class Grid(object):
         plt.show()
        
     def render(self):
-        self._render_to_colormap()
+        #self._render_to_colormap()
         self._render_to_text()
         
     def make(self,coordinate,value):#make? ino rite?
@@ -107,7 +104,7 @@ class FractalHeightmap(object):
                  ##  *you can change these* 
                  #corner_seed_ranges=[(10,90),(10,90),(10,90),(10,90)],
                  ##corner_seed_ranges=[(10,100),(10,100),(10,100),(10,100)],
-                 corner_seed_ranges=[(40,60),(40,60),(40,60),(40,60)],
+                 corner_seed_ranges=[(0,100),(0,100),(0,100),(0,100)],
                  
                  max_depth=3):
         self.grid=grid
@@ -242,12 +239,12 @@ class FractalHeightmap(object):
         #g.render()
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
     #TESTPROG
     
     
     #g_size is the length of a side of a square grid
-    g_size=32#//must(n't) be a power of 2  ((non powers of two do work.  number 8 doesnt)
+    g_size=16#//must(n't) be a power of 2  ((non powers of two do work.  number 8 doesnt)
     
     #roughness,  low values make smooth landscapes, high values rough landscapes for many interpretations of rough
     #'noraml' range from 1.0 to 10.0
@@ -258,20 +255,22 @@ if __name__ == '__main__':
     emitter=OSCSender('/test',test_ip)
     
     sleep_time=(1000.0/target_rate)/1000.0
-    inter_grid_sleep=0
+    inter_grid_sleep=30
     g=Grid(g_size+1,g_size+1)
     f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
     print 'STARTING GRID'
     f.grid.render()
     print '______________________________________'
-    #ctr=1
+    ctr=1
     while True:
         #init
         start=datetime.datetime.now()
         g=Grid(g_size+1,g_size+1)
-        f.zoom(0.01)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
-                    #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
-        #f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
+        if ctr % 8==0:
+            f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
+        else:
+            f.zoom(0.75)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
+                        #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
         #calc
         for y in xrange(0,f.grid.size_y-1):
             for x in xrange(0,f.grid.size_x-1):
@@ -282,7 +281,7 @@ if __name__ == '__main__':
                 sleep(sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
         #render
         f.grid.render()
-        #ctr+=1
+        ctr+=1
         ##
         sleep(inter_grid_sleep)
         end=datetime.datetime.now()
