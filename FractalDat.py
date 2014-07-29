@@ -12,6 +12,7 @@ import matplotlib.cm as cm
 from math import sqrt
 from collections import namedtuple
 import random
+import math
 from mypyosc import *
 import datetime
 import matplotlib.gridspec as gridspec
@@ -87,7 +88,11 @@ class Grid(object):
         #print 'making',coordinate.x,coordinate.y
         self._data[coordinate.x][coordinate.y]=value
             
-            
+    def logscaled(self,scale):
+        for iy,row in enumerate(self._data):
+            for ix,H in enumerate(row):
+                if H!=0:
+                    self._data[ix][iy]=log(H/(random.random()*2))*scale
             
             #we dont need get
             # OR MAKE! YOU FOOL! just access self._data, it's public
@@ -104,7 +109,7 @@ class FractalHeightmap(object):
                  ##  *you can change these* 
                  #corner_seed_ranges=[(10,90),(10,90),(10,90),(10,90)],
                  ##corner_seed_ranges=[(10,100),(10,100),(10,100),(10,100)],
-                 corner_seed_ranges=[(0,100),(0,100),(0,100),(0,100)],
+                 corner_seed_ranges=[(50,51),(50,51),(50,51),(50,51)],
                  
                  max_depth=3):
         self.grid=grid
@@ -238,52 +243,67 @@ class FractalHeightmap(object):
         self.generate_heightmap(Corners(center,right_c,bot_c,br),depth+1)
         #g.render()
 
+#        print 'THIS SHOULD APPEAR ONCE PER GRID'
+#        self.grid.logscaled(15)
+
+
+class OSCFractgrid(object):
+    
+    def __init__(self,grid_size,roughness,zoom,inter_grid_gap,
+                  osc_rate,ip_addr,port,target,
+                  starting_corners=None):
+        
+        self.sleep_time=(1000.0/osc_rate)/1000.0
+        self.zoom=zoom
+        self.inter_grid_sleep=inter_grid_gap
+        self.grid_size=grid_size
+        self.grid=Grid(grid_size+1,grid_size+1)
+        self.ip_addr=IPAddr(ip_addr,8002)
+        self.target=target
+        self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size))#sqrt because spatial doubling of point data
+        self.osc_emitter=OSCSender(self.target,self.ip_addr)
+        
+    def start(self):
+        ctr=1
+        while True:
+            #init
+            start=datetime.datetime.now()
+            if (ctr % 4==0) or (ctr==1):
+                print 'NEW GRID'
+                self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),starting_corners=None)#sqrt because spatial doubling of point data
+            else:
+                self.fractal_heightmap.zoom(0.75)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
+                                                 #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
+
+            for y in xrange(0,self.fractal_heightmap.grid.size_y-1):
+                for x in xrange(0,self.fractal_heightmap.grid.size_x-1):
+                    self.osc_emitter.message.clearData()
+                    [ self.osc_emitter.message.append(n) for n in ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) ]#thats a tuple not a function call on in.()
+                    #send
+                    self.osc_emitter.send()
+                    sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
+            #render
+            self.fractal_heightmap.grid.render()
+            ctr+=1
+            ##
+            sleep(self.inter_grid_sleep)
+            end=datetime.datetime.now()
+            print '(estimated) Init+Calc+Send+Render+grid_sleep time',end-start
+            print '\n\n'
 
 if __name__ == '__main__': 
     #TESTPROG
     
-    
-    #g_size is the length of a side of a square grid
-    g_size=16#//must(n't) be a power of 2  ((non powers of two do work.  number 8 doesnt)
-    
-    #roughness,  low values make smooth landscapes, high values rough landscapes for many interpretations of rough
-    #'noraml' range from 1.0 to 10.0
-    roughness=13.3
-    target_rate=75 #OSC Messages sent per second
-    
-    test_ip=IPAddr('77.101.65.99',8002)
-    emitter=OSCSender('/test',test_ip)
-    
-    sleep_time=(1000.0/target_rate)/1000.0
+    g_size=32
+    roughness=20
+    osc_rate=300 #OSC Messages sent per second
+    zoom=0.75
     inter_grid_sleep=30
-    g=Grid(g_size+1,g_size+1)
-    f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
-    print 'STARTING GRID'
-    f.grid.render()
-    print '______________________________________'
-    ctr=1
-    while True:
-        #init
-        start=datetime.datetime.now()
-        g=Grid(g_size+1,g_size+1)
-        if ctr % 8==0:
-            f=FractalHeightmap(g,1,roughness,max_depth=sqrt(g_size))#sqrt because spatial doubling of point data
-        else:
-            f.zoom(0.75)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
-                        #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
-        #calc
-        for y in xrange(0,f.grid.size_y-1):
-            for x in xrange(0,f.grid.size_x-1):
-                emitter.message.clearData()
-                [ emitter.message.append(n) for n in ( x,y,f.grid.get(Coord(x,y)) ) ]#thats a tuple not a function call on in.()
-                #send
-                emitter.send()
-                sleep(sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
-        #render
-        f.grid.render()
-        ctr+=1
-        ##
-        sleep(inter_grid_sleep)
-        end=datetime.datetime.now()
-        print '(estimated) Init+Calc+Send+Render+grid_sleep time',end-start
-        print '\n\n'
+    ip_addr='77.101.65.99'
+    port=8002
+    target='/test'
+    osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target)
+    osc_fgrid.start()
+    
+    
+    
