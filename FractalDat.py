@@ -252,12 +252,13 @@ class FractalHeightmap(object):
 #        self.grid.logscaled(15)
 
 
-class OSCFractgrid(object):
+import threading
+class OSCFractgrid(threading.Thread):
     
     def __init__(self,grid_size,roughness,zoom,inter_grid_gap,
                   osc_rate,ip_addr,port,target,
                   starting_corners=None,zoom_steps=4,center_val=None):
-        
+        threading.Thread.__init__(self)
         self.sleep_time=(1000.0/osc_rate)/1000.0
         self.zoom=zoom
         self.inter_grid_sleep=inter_grid_gap
@@ -269,7 +270,7 @@ class OSCFractgrid(object):
         self.osc_emitter=OSCSender(self.target,self.ip_addr)
         self.zoom_steps=zoom_steps
         
-    def start(self):
+    def run(self):
         ctr=1
         while True:
             #init
@@ -309,20 +310,34 @@ class OSCFractgrid(object):
     
     
 if __name__ == '__main__': 
+    
+    def roughness_handler(a,b,c,d):
+        #osc_fgrid.fractal_heightmap.roughness=something
+        print '\n\n\n\n\nGOT SOMETHING\n\n\n\n\n\n',a,b,c,d
+        pass
+    
+    #setup server
+    osc_srv=OSCReceiver(13579, [('/roughness',roughness_handler)] )
+    osc_srv.start()
+    osc_emitter=OSCSender('/roughness',('localhost',13579))
     #TESTPROG
     
-    g_size=32
-    roughness=60
-    osc_rate=300 #OSC Messages sent per second
-    zoom=.75
-    inter_grid_sleep=12.33
-    center_val=75
-    zoom_steps=4
+    g_size=32#32
+    roughness=80#80
+    osc_rate=300 #300 OSC Messages sent per second
+    zoom=.75#.25
+    inter_grid_sleep=12.33#12.33
+    center_val=400#400
+    zoom_steps=8#4
     ip_addr='77.101.65.99'
     port=8002
     target='/test'
     osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target,zoom_steps=zoom_steps,center_val=center_val)
     osc_fgrid.start()
+    print 'Whoopie'
+    sleep(120)
+    osc_emitter.message.append(100)
+    osc_emitter.send()
     
     
     
