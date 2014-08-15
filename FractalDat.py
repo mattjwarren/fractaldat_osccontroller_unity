@@ -47,8 +47,10 @@ class Grid(object):
         return subgrid
 
     def _serialise(self):
-        serial_data=[ v for row in self._data  for v in row  ] #return a new, not a reference.
+        
+        serial_data=[ v for row in self._data for v in row  ] #return a new, not a reference. //also reads backwards
         return serial_data
+
 
     def _render_to_colormap(self):
         #vals=self._serialise()
@@ -109,16 +111,14 @@ class FractalHeightmap(object):
                  ##  *you can change these* 
                  #corner_seed_ranges=[(10,90),(10,90),(10,90),(10,90)],
                  ##corner_seed_ranges=[(10,100),(10,100),(10,100),(10,100)],
-                 corner_seed_ranges=[ ( int(random.random()*60)+20, int(random.random()*60)+20 ),
-                                      ( int(random.random()*60)+20, int(random.random()*60)+20 ),
-                                      ( int(random.random()*60)+20, int(random.random()*60)+20 ),
-                                      ( int(random.random()*60)+20, int(random.random()*60)+20 ) ],
+                 corner_seed_ranges=[(0,140),(0,140),
+                                     (0,140),(0,140)],
                  
                  max_depth=3,
-                 center_val=None):
+                 center_val_range=None):
         self.grid=grid
         self.max_depth=max_depth
-        self._set_initial_corners(corner_seed_ranges,center_val)
+        self._set_initial_corners(corner_seed_ranges,center_val_range)
         self.roughness=roughness
         self.generate_heightmap([Coord(0,0),###############EDIED OUT MINNUS ONES FRM size parm exp[ressions
                                  Coord(self.grid.size_x-1,0),
@@ -162,7 +162,7 @@ class FractalHeightmap(object):
                                  Coord(self.grid.size_x-1,self.grid.size_y-1)],1
                                 )
 
-    def _set_initial_corners(self,corner_seed_ranges, center_val=None):
+    def _set_initial_corners(self,corner_seed_ranges, center_val_range=None):
         tl,tr,bl,br=corner_seed_ranges #could be same representation as Corners(), but out of expecteed ranges
         seeds=[[tl,tr],
                [bl,br]]
@@ -175,8 +175,8 @@ class FractalHeightmap(object):
                 except ValueError:
                     val=seeds[x_idx][y_idx]
                 self.grid.make(Coord(x,y),val)
-        if center_val:
-            self.grid.make(Coord(self.grid.size_x/2,self.grid.size_y/2),center_val)
+        if center_val_range:
+            self.grid.make(Coord(self.grid.size_x/2,self.grid.size_y/2),random.random()*(center_val_range[1]-center_val_range[0])+center_val_range[0])
     def generate_heightmap(self,corners,depth):
         '''corners = Corners(Coord(),Coord(),Coord(),Coord()) / tl/tr/bl/br'''
         if depth>self.max_depth: return
@@ -257,7 +257,7 @@ class OSCFractgrid(threading.Thread):
     
     def __init__(self,grid_size,roughness,zoom,inter_grid_gap,
                   osc_rate,ip_addr,port,target,
-                  starting_corners=None,zoom_steps=4,center_val=None):
+                  starting_corners=None,zoom_steps=4,center_val_range=None,corner_seed_ranges=None):
         threading.Thread.__init__(self)
         self.sleep_time=(1000.0/osc_rate)/1000.0
         self.zoom=zoom
@@ -266,7 +266,10 @@ class OSCFractgrid(threading.Thread):
         self.grid=Grid(grid_size+1,grid_size+1)
         self.ip_addr=IPAddr(ip_addr,8002)
         self.target=target
-        self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),center_val=center_val)#sqrt because spatial doubling of point data
+        self.corner_seed_ranges=corner_seed_ranges
+        self.center_val_range=center_val_range
+        self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),
+                                        center_val_range=self.center_val_range,corner_seed_ranges=self.corner_seed_ranges)#sqrt because spatial doubling of point data
         self.osc_emitter=OSCSender(self.target,self.ip_addr)
         self.zoom_steps=zoom_steps
         
@@ -278,20 +281,19 @@ class OSCFractgrid(threading.Thread):
             if ctr % self.zoom_steps==0:
                 print 'NEW GRID'
                 self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),
-                                                        corner_seed_ranges=[( int(random.random()*60)+20, int(random.random()*60)+20 ),
-                                                                            ( int(random.random()*60)+20, int(random.random()*60)+20 ),
-                                                                            ( int(random.random()*60)+20, int(random.random()*60)+20 ),
-                                                                            ( int(random.random()*60)+20, int(random.random()*60)+20 )
-                                                                            ],center_val=center_val
+                                                        corner_seed_ranges=self.corner_seed_ranges,center_val_range=self.center_val_range,
                                                         )#sqrt because spatial doubling of point data
             else:
                 self.fractal_heightmap.zoom(self.zoom)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
-                                                 #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
+                                                       #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
 
             for y in xrange(0,self.fractal_heightmap.grid.size_y):
                 for x in xrange(0,self.fractal_heightmap.grid.size_x):
                     self.osc_emitter.message.clearData()
-                    [ self.osc_emitter.message.append(n) for n in ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) ]#thats a tuple not a function call on in.()
+                    [ self.osc_emitter.message.append(n)
+                        for n in
+                    ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) ]#thats a tuple not a function call on in.()
+                    
                     #send
                     self.osc_emitter.send()
                     sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
@@ -323,16 +325,19 @@ if __name__ == '__main__':
     #TESTPROG
     
     g_size=32#32
-    roughness=80#80
-    osc_rate=300 #300 OSC Messages sent per second
+    roughness=60#80
+    osc_rate=70 #300 OSC Messages sent per second
     zoom=.75#.25
     inter_grid_sleep=12.33#12.33
-    center_val=400#400
+    center_val_range=(0,140)
     zoom_steps=8#4
     ip_addr='77.101.65.99'
     port=8002
     target='/test'
-    osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target,zoom_steps=zoom_steps,center_val=center_val)
+    corner_seed_ranges=[( 0,140),(0,140),
+                        ( 0,140),(0,140)]
+    osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target,zoom_steps=zoom_steps,
+                           center_val_range=center_val_range,corner_seed_ranges=corner_seed_ranges)
     osc_fgrid.start()
     print 'Whoopie'
     sleep(120)
