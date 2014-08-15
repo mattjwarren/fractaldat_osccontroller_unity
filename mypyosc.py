@@ -6,12 +6,23 @@ Created on 18 Jul 2014
 from time import sleep
 from my_pyOSC import OSCClient, OSCMessage
 
-
-
+from my_pyOSC import OSCServer
+from threading import Thread
 
 from collections import namedtuple
 
 IPAddr=namedtuple('IPAddr','ip port')
+
+class OSCReceiver(Thread,OSCServer):
+    
+    def __init__(self,port,addresses):
+        Thread.__init__(self)
+        OSCServer.__init__(self,('localhost',port))
+        for address,handler in addresses:
+            self.addMsgHandler(address,handler)
+    
+    def run(self):
+        self.serve_forever()
 
 class OSCSender(OSCClient):
     '''places a message of '0' in pos 1 of the list'''
