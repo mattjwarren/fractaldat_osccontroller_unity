@@ -64,25 +64,25 @@ class Grid(object):
         
         
         #plt.contour(self._data, cmap=cm.BrBG)
-        data = np.array(self._data)
-        length = data.shape[0]
-        width = data.shape[1]
-        x, y = np.meshgrid(np.arange(length), np.arange(width))
-        
-        fig = plt.figure()
-        ax = fig.add_subplot(1,1,1, projection='3d')
-        ax.plot_surface(x, y, data)
-        plt.show()
+# #         data = np.array(self._data)
+# #         length = data.shape[0]
+# #         width = data.shape[1]
+# #         x, y = np.meshgrid(np.arange(length), np.arange(width))
+# #         
+# #         fig = plt.figure()
+# #         ax = fig.add_subplot(1,1,1, projection='3d')
+# #         ax.plot_surface(x, y, data)
+# #         plt.show()
         
         #this one averages by nearest neighbours, i think....
-        #plt.imshow(self._data,cmap=cm.gist_rainbow)
+        plt.imshow(self._data,cmap=cm.gist_rainbow)
         
         
         plt.show()
        
     def render(self):
-        #self._render_to_colormap()
         self._render_to_text()
+       # self._render_to_colormap()
         
     def make(self,coordinate,value):#make? ino rite?
         #print 'making',coordinate.x,coordinate.y
@@ -107,12 +107,16 @@ class FractalHeightmap(object):
                  ## the numbers in corner_seed_ranges specify the range of numbers each corner can take
                  ## when the drid is first initialised
                  ##  *you can change these* 
-                 #corner_seed_ranges=[(10,90),(10,90),(10,90),(10,90)],
+                 corner_seed_ranges=[(10,60),(10,30),(10,60),(10,30)],
                  ##corner_seed_ranges=[(10,100),(10,100),(10,100),(10,100)],
-                 corner_seed_ranges=[(50,51),(50,51),(50,51),(50,51)],
+                 ##corner_seed_ranges=[(20,41),(40,45),(20,41),(40,45)],
+                 center_value=75,
+                 starting_corners=None,
                  
                  max_depth=3):
+        print "NEW GRID"
         self.grid=grid
+        self.center_value=center_value
         self.max_depth=max_depth
         self._set_initial_corners(corner_seed_ranges)
         self.roughness=roughness
@@ -148,9 +152,8 @@ class FractalHeightmap(object):
                 zg_y=int(round(idx_y*step_y))
                 zoomed_grid.make(Coord(zg_x,zg_y),
                                     subgrid.get(Coord(sg_x,sg_y)))
-        print 'ZOOM SCLED'
+        print 'ZOOM SCALED'
         zoomed_grid.render()
-        print '-------------------------'
         self.grid=zoomed_grid
         self.generate_heightmap([Coord(0,0),
                                  Coord(self.grid.size_x-1,0),
@@ -171,6 +174,10 @@ class FractalHeightmap(object):
                 except ValueError:
                     val=seeds[x_idx][y_idx]
                 self.grid.make(Coord(x,y),val)
+        if self.center_value:
+            sgc=self.grid.corners
+            center=Coord(sgc.tl.x+((sgc.tr.x-sgc.tl.x)/2),sgc.tr.y+((sgc.br.y-sgc.tr.y)/2))
+            self.grid.make(center,self.center_value)
                 
     def generate_heightmap(self,corners,depth):
         '''corners = Corners(Coord(),Coord(),Coord(),Coord()) / tl/tr/bl/br'''
@@ -268,13 +275,16 @@ class OSCFractgrid(object):
         while True:
             #init
             start=datetime.datetime.now()
-            if (ctr % 4==0) or (ctr==1):
-                print 'NEW GRID'
-                self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),starting_corners=None)#sqrt because spatial doubling of point data
+            if (ctr % 4==0)  or (ctr==1):
+                corner_seeds=[( (random.random()*60)+20,(random.random()*60)+20),((random.random()*60)+20,(random.random()*60)+20),
+                              ((random.random()*60)+20,(random.random()*60)+20),((random.random()*60)+20,(random.random()*60)+20)]
+                self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),corner_seed_ranges=corner_seeds,starting_corners=None)#sqrt because spatial doubling of point data
+                self.fractal_heightmap.grid.render()
             else:
                 self.fractal_heightmap.zoom(0.75)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
                                                  #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
-
+                print "FINISHED ZOOMING"
+                self.fractal_heightmap.grid.render()
             for y in xrange(0,self.fractal_heightmap.grid.size_y-1):
                 for x in xrange(0,self.fractal_heightmap.grid.size_x-1):
                     self.osc_emitter.message.clearData()
@@ -282,8 +292,6 @@ class OSCFractgrid(object):
                     #send
                     self.osc_emitter.send()
                     sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
-            #render
-            self.fractal_heightmap.grid.render()
             ctr+=1
             ##
             sleep(self.inter_grid_sleep)
@@ -293,7 +301,6 @@ class OSCFractgrid(object):
 
 if __name__ == '__main__': 
     #TESTPROG
-    
     g_size=32
     roughness=20
     osc_rate=300 #OSC Messages sent per second
