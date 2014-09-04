@@ -74,7 +74,7 @@ class bare_hand(object): #could be used as base melle object interface
         #get releveant defensive shit from thing,
         #return difficulty number for action
         #
-        #self is the entity using thin to doing the sriking
+        #self is the entity using thing to doing the striking
         
         
         pass

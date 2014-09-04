@@ -83,6 +83,7 @@ class Grid(object):
         plt.show()
        
     def render(self):
+        #pass
         #self._render_to_colormap()
         self._render_to_text()
         
@@ -218,7 +219,7 @@ class FractalHeightmap(object):
         
         #left_c
         if self.grid.get(left_c)==0:
-            avg=sum([self.grid.get(tl), #no need to use sum
+            avg=sum([self.grid.get(tl), #no need to use sum YOU KNOB
                      self.grid.get(bl)]
                     )/2.0
             offset=((random.random())-.5)*self.roughness
@@ -324,28 +325,28 @@ if __name__ == '__main__':
     #setup server
     osc_srv=OSCReceiver(13579, [('/roughness',roughness_handler)] )
     osc_srv.start()
+    
     osc_emitter=OSCSender('/roughness',('localhost',13579))
+# #     sleep(10)
+# #     osc_emitter.message.append(99)
+# #     osc_emitter.send()
     #TESTPROG
     g_size=32#32
-    roughness=60#80
-    osc_rate=70 #300 OSC Messages sent per second
+    roughness=2#80
+    osc_rate=300 #300 OSC Messages sent per second
     zoom=.75#.25
     inter_grid_sleep=12.33#12.33
-    center_val_range=(0,140)
-    zoom_steps=8#4
-    
+    center_val_range=(-300,300)
+    zoom_steps=4#4
+          
     ip_addr='77.101.65.99'
     port=8002
     target='/test'
-    corner_seed_ranges=[( 0,140),(0,140),
-                        ( 0,140),(0,140)]
+    corner_seed_ranges=[( -50,200),(-5,200),
+                        (-100,85),(-100,100)]
     osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target,zoom_steps=zoom_steps,
                            center_val_range=center_val_range,corner_seed_ranges=corner_seed_ranges)
     osc_fgrid.start()
-    print 'Whoopie'
-    sleep(120)
-    osc_emitter.message.append(100)
-    osc_emitter.send()
-    
+
     
     
