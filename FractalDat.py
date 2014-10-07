@@ -332,18 +332,18 @@ if __name__ == '__main__':
 # #     osc_emitter.send()
     #TESTPROG
     g_size=32#32
-    roughness=2#80
+    roughness=80#80
     osc_rate=300 #300 OSC Messages sent per second
     zoom=.75#.25
-    inter_grid_sleep=12.33#12.33
-    center_val_range=(-300,300)
+    inter_grid_sleep=30#12.33
+    center_val_range=(-50,200)
     zoom_steps=4#4
           
     ip_addr='77.101.65.99'
     port=8002
     target='/test'
-    corner_seed_ranges=[( -50,200),(-5,200),
-                        (-100,85),(-100,100)]
+    corner_seed_ranges=[( 40,80),(40,80),
+                        (40,80),(40,80)]
     osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target,zoom_steps=zoom_steps,
                            center_val_range=center_val_range,corner_seed_ranges=corner_seed_ranges)
     osc_fgrid.start()
