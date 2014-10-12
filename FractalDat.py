@@ -83,9 +83,9 @@ class Grid(object):
         plt.show()
        
     def render(self):
-        #pass
+        pass
         #self._render_to_colormap()
-        self._render_to_text()
+        #self._render_to_text()
         
     def make(self,coordinate,value):#make? ino rite?
         #print 'making',coordinate.x,coordinate.y
@@ -259,7 +259,7 @@ import threading
 class OSCFractgrid(threading.Thread):
     
     def __init__(self,grid_size,roughness,zoom,inter_grid_gap,
-                  osc_rate,ip_addr,port,target,
+                  osc_rate,ip_addrs,port,target,
                   starting_corners=None,zoom_steps=4,center_val_range=None,corner_seed_ranges=None):
         threading.Thread.__init__(self)
         self.sleep_time=(1000.0/osc_rate)/1000.0
@@ -267,13 +267,13 @@ class OSCFractgrid(threading.Thread):
         self.inter_grid_sleep=inter_grid_gap
         self.grid_size=grid_size
         self.grid=Grid(grid_size+1,grid_size+1)
-        self.ip_addr=IPAddr(ip_addr,8002)
+        self.ip_addrs=[ IPAddr(ip_addr,port) for ip_addr in ip_addrs ]
         self.target=target
         self.corner_seed_ranges=corner_seed_ranges
         self.center_val_range=center_val_range
         self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),
                                         center_val_range=self.center_val_range,corner_seed_ranges=self.corner_seed_ranges)#sqrt because spatial doubling of point data
-        self.osc_emitter=OSCSender(self.target,self.ip_addr)
+        self.osc_emitters=[ OSCSender(self.target,ip_addr) for ip_addr in self.ip_addrs ]
         self.zoom_steps=zoom_steps
         
     def run(self):
@@ -293,13 +293,15 @@ class OSCFractgrid(threading.Thread):
                 self.fractal_heightmap.grid.render()
             for y in xrange(0,self.fractal_heightmap.grid.size_y):
                 for x in xrange(0,self.fractal_heightmap.grid.size_x):
-                    self.osc_emitter.message.clearData()
-                    [ self.osc_emitter.message.append(n)
+                    [ osc_emitter.message.clearData() for osc_emitter in self.osc_emitters ]
+                    
+                    [ [ osc_emitter.message.append(n)
                         for n in
-                    ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) ]#thats a tuple not a function call on in.()
+                    ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) ]
+                      for osc_emitter in self.osc_emitters ]
                     
                     #send
-                    self.osc_emitter.send()
+                    [ osc_emitter.send() for osc_emitter in self.osc_emitters ]
                     sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
             #render
             self.fractal_heightmap.grid.render()
@@ -318,33 +320,35 @@ class OSCFractgrid(threading.Thread):
 if __name__ == '__main__': 
     
     def roughness_handler(a,b,c,d):
-        #osc_fgrid.fractal_heightmap.roughness=something
-        print '\n\n\n\n\nGOT SOMETHING\n\n\n\n\n\n',a,b,c,d
-        pass
-    
+        print "Setting roughness to ",c[0]
+        osc_fgrid.fractal_heightmap.roughness=float(c[0])
+        
     #setup server
     osc_srv=OSCReceiver(13579, [('/roughness',roughness_handler)] )
     osc_srv.start()
     
-    osc_emitter=OSCSender('/roughness',('localhost',13579))
-# #     sleep(10)
-# #     osc_emitter.message.append(99)
-# #     osc_emitter.send()
+    osc_emitter=OSCSender('/roughness',('192.168.0.9',13579))
+    sleep(10)
+    osc_emitter.message.append(99)
+    osc_emitter.send()
+    sleep(10)
     #TESTPROG
     g_size=32#32
-    roughness=80#80
+    roughness=5#80
     osc_rate=300 #300 OSC Messages sent per second
     zoom=.75#.25
-    inter_grid_sleep=30#12.33
-    center_val_range=(-50,200)
+    inter_grid_sleep=5#12.33
+    center_val_range=(0,100)
     zoom_steps=4#4
           
-    ip_addr='77.101.65.99'
+    ip_addrs=['192.168.0.4',
+              '192.168.0.9']
+    
     port=8002
-    target='/test'
-    corner_seed_ranges=[( 40,80),(40,80),
-                        (40,80),(40,80)]
-    osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addr,port,target,zoom_steps=zoom_steps,
+    target='/FractGrid'
+    corner_seed_ranges=[( 0,100),(0,100),
+                        (0,100),(0,100)]
+    osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addrs,port,target,zoom_steps=zoom_steps,
                            center_val_range=center_val_range,corner_seed_ranges=corner_seed_ranges)
     osc_fgrid.start()
 

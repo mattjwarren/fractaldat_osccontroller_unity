@@ -1,4 +1,4 @@
-import win32api, win32con
+import win32api, win32con, win32gui
 import time
 
 def click(x,y):
@@ -20,3 +20,4 @@ def rgbint2rgbtuple(RGBint):
 click(100,200)
 press_back()
 color = win32gui.GetPixel(win32gui.GetDC(win32gui.GetActiveWindow()), 100 , 200)
+print rgbint2rgbtuple(color)
