@@ -17,7 +17,7 @@ class OSCReceiver(Thread,OSCServer):
     
     def __init__(self,port,addresses):
         Thread.__init__(self)
-        OSCServer.__init__(self,('192.168.0.9',port))
+        OSCServer.__init__(self,('192.168.0.8',port))
         for address,handler in addresses:
             self.addMsgHandler(address,handler)
     

@@ -271,7 +271,8 @@ class OSCFractgrid(threading.Thread):
         self.target=target
         self.corner_seed_ranges=corner_seed_ranges
         self.center_val_range=center_val_range
-        self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),
+        self.roughness=roughness
+        self.fractal_heightmap=FractalHeightmap(self.grid,1,self.roughness,max_depth=sqrt(self.grid_size),
                                         center_val_range=self.center_val_range,corner_seed_ranges=self.corner_seed_ranges)#sqrt because spatial doubling of point data
         self.osc_emitters=[ OSCSender(self.target,ip_addr) for ip_addr in self.ip_addrs ]
         self.zoom_steps=zoom_steps
@@ -283,7 +284,8 @@ class OSCFractgrid(threading.Thread):
             start=datetime.datetime.now()
             if ctr % self.zoom_steps==0:
                 print 'NEW GRID'
-                self.fractal_heightmap=FractalHeightmap(self.grid,1,roughness,max_depth=sqrt(self.grid_size),
+                print 'CSRs',self.corner_seed_ranges
+                self.fractal_heightmap=FractalHeightmap(self.grid,1,self.roughness,max_depth=sqrt(self.grid_size),
                                                         corner_seed_ranges=self.corner_seed_ranges,center_val_range=self.center_val_range,
                                                         )#sqrt because spatial doubling of point data
             else:
@@ -322,32 +324,108 @@ if __name__ == '__main__':
     def roughness_handler(a,b,c,d):
         print "Setting roughness to ",c[0]
         osc_fgrid.fractal_heightmap.roughness=float(c[0])
+        osc_fgrid.roughness=float(c[0])
+
+
+    def tl_min(a,b,data,d):
+        print "Setting tl_min to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        tl=(float(data[0]),tl[1])
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
         
+    def tl_max(a,b,data,d):
+        print "Setting tl_max to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        tl=(tl[0],float(data[0]))
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
+        
+    def tr_min(a,b,data,d):
+        print "Setting tr_min to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        tr=(float(data[0]),tr[1])
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
+        
+    def tr_max(a,b,data,d):
+        print "Setting tr_max to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        tr=(tr[0],float(data[0]))
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
+        
+    def bl_min(a,b,data,d):
+        print "Setting bl_min to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        bl=(float(data[0]),bl[1])
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
+        
+    def bl_max(a,b,data,d):
+        print "Setting bl_max to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        bl=(bl[0],float(data[0]))
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
+
+    def br_min(a,b,data,d):
+        print "Setting br_min to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        br=(float(data[0]),br[1])
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)
+        
+    def br_max(a,b,data,d):
+        print "Setting br_max to ",data[0]
+        tl,tr,bl,br=osc_fgrid.corner_seed_ranges
+        br=(br[0],float(data[0]))
+        osc_fgrid.corner_seed_ranges=(tl,tr,bl,br)        
+
+    def ctr_min(a,b,data,d):
+        print "Setting ctr_min to ",data[0]
+        cmin,cmax=osc_fgrid.center_val_range
+        cmin=float(data[0])
+        osc_fgrid.center_val_range=(cmin,cmax)
+        
+    def ctr_max(a,b,data,d):
+        print "Setting ctr_max to ",data[0]
+        cmin,cmax=osc_fgrid.center_val_range
+        cmax=float(data[0])
+        osc_fgrid.center_val_range=(cmin,cmax)
+
     #setup server
-    osc_srv=OSCReceiver(13579, [('/roughness',roughness_handler)] )
+    osc_srv=OSCReceiver(13579, [('/roughness',roughness_handler),
+                                ('/tl_min',tl_min),
+                                ('/tl_max',tl_max),
+                                ('/tr_min',tr_min),
+                                ('/tr_max',tr_max),
+                                ('/bl_min',bl_min),
+                                ('/bl_max',bl_max),
+                                ('/br_min',br_min),
+                                ('/br_max',br_max),
+                                ('/ctr_min',ctr_min),
+                                ('/ctr_max',ctr_max)
+                                ]
+                        )
+    
     osc_srv.start()
     
-    osc_emitter=OSCSender('/roughness',('192.168.0.9',13579))
-    sleep(10)
-    osc_emitter.message.append(99)
-    osc_emitter.send()
-    sleep(10)
+#     osc_emitter=OSCSender('/roughness',('192.168.0.8',13579))
+#     sleep(10)
+#     osc_emitter.message.append(99)
+#     osc_emitter.send()
+#     sleep(10)
     #TESTPROG
     g_size=32#32
-    roughness=5#80
+    roughness=0#80
     osc_rate=300 #300 OSC Messages sent per second
+    corner_seed_ranges=[( 0,360),(360,360),
+                        (0,360),(360,360)]
     zoom=.75#.25
     inter_grid_sleep=5#12.33
-    center_val_range=(0,100)
-    zoom_steps=4#4
+    center_val_range=(0,0)
+    zoom_steps=2#4
           
-    ip_addrs=['192.168.0.4',
-              '192.168.0.9']
+    ip_addrs=['77.101.65.99',
+              '192.168.0.8']
     
     port=8002
     target='/FractGrid'
-    corner_seed_ranges=[( 0,100),(0,100),
-                        (0,100),(0,100)]
+
     osc_fgrid=OSCFractgrid(g_size,roughness,zoom,inter_grid_sleep,osc_rate,ip_addrs,port,target,zoom_steps=zoom_steps,
                            center_val_range=center_val_range,corner_seed_ranges=corner_seed_ranges)
     osc_fgrid.start()
