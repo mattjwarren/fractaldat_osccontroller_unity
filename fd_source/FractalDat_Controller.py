@@ -246,10 +246,10 @@ class FractalDat_Controller(threading.Thread):
         
 if __name__ == '__main__': 
         print "Creating the_machine."
-        the_machine=FractalDat_Controller([('127.0.0.1',8002,'FractGrid'),
+        the_machine=FractalDat_Controller([('10.114.171.146',8002,'FractGrid'),
                                            ],
                                           13579,'127.0.0.1')
         print "the_machine is created. I will start it now."
         the_machine.start()
         print "the_machine has started."
-        print "I am ending"
+        print "I am ending."
