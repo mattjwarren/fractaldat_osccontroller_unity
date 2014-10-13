@@ -15,9 +15,9 @@ IPAddr=namedtuple('IPAddr','ip port')
 
 class OSCReceiver(Thread,OSCServer):
     
-    def __init__(self,port,addresses):
+    def __init__(self,port,addresses,bind_ip):
         Thread.__init__(self)
-        OSCServer.__init__(self,('192.168.0.8',port))
+        OSCServer.__init__(self,(bind_ip,port))
         for address,handler in addresses:
             self.addMsgHandler(address,handler)
     

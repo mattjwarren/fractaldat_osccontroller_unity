@@ -9,7 +9,7 @@ from scipy.interpolate import griddata
 from pylab import *
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from math import sqrt 
+
 from collections import namedtuple
 import random
 import math
@@ -18,7 +18,7 @@ import datetime
 import matplotlib.gridspec as gridspec
 Coord=namedtuple('Coord','x y')
 Corners=namedtuple('Corners','tl tr bl br')
-
+import threading
 
 class Grid(object):
     '''grid handedness, 0,0=topleft  max,max=bottom right
@@ -32,7 +32,8 @@ class Grid(object):
                       Coord(0,self.size_y-1),Coord(self.size_x-1,self.size_y-1))
         
         self._data=[ [0 for _ in xrange(x)] for _ in xrange(y) ]
-                
+        print "NEW GRID CREATED"
+        
     def _render_to_text(self):
         for row in self._data:
             print [ int(round(n)) for n in row ]
@@ -118,16 +119,19 @@ class FractalHeightmap(object):
                  
                  max_depth=3,
                  center_val_range=None):
-        print "NEW GRID"
         self.grid=grid
         self.max_depth=max_depth
         self._set_initial_corners(corner_seed_ranges,center_val_range)
         self.roughness=roughness
+        print "STARTING NEW HEIGHTMAP"
+        before=datetime.datetime.now()
         self.generate_heightmap([Coord(0,0),###############EDIED OUT MINNUS ONES FRM size parm exp[ressions
                                  Coord(self.grid.size_x-1,0),
                                  Coord(0,self.grid.size_y-1),
                                  Coord(self.grid.size_x-1,self.grid.size_y-1)],1
                                 )
+        after=datetime.datetime.now()
+        print "FINISHED NEW HEIGHTMAP",(after-before)
 
     #currently performs centered subgrid zoom, subgrid size expressed as percentage
     def zoom(self,subgrid_size):
@@ -155,9 +159,7 @@ class FractalHeightmap(object):
                 zg_y=int(round(idx_y*step_y))
                 zoomed_grid.make(Coord(zg_x,zg_y),
                                     subgrid.get(Coord(sg_x,sg_y)))
-        print 'ZOOM SCALED'
         zoomed_grid.render()
-        print '-------------------------'
         self.grid=zoomed_grid
         self.generate_heightmap([Coord(0,0),
                                  Coord(self.grid.size_x-1,0),
@@ -173,13 +175,14 @@ class FractalHeightmap(object):
             for y_idx,y in enumerate([0,self.grid.size_y-1]):
                 try:
                     minval,maxval=seeds[x_idx][y_idx]
-                    print 'CORNER VAL MINMAX INIT',minval,maxval
                     val=minval+(random.random()*(maxval-minval))
                 except ValueError:
                     val=seeds[x_idx][y_idx]
                 self.grid.make(Coord(x,y),val)
         if center_val_range:
-            self.grid.make(Coord(self.grid.size_x/2,self.grid.size_y/2),random.random()*(center_val_range[1]-center_val_range[0])+center_val_range[0])
+            self.grid.make(Coord(self.grid.size_x/2,self.grid.size_y/2),
+                           random.random()*(center_val_range[1]-center_val_range[0])+center_val_range[0])
+            
     def generate_heightmap(self,corners,depth):
         '''corners = Corners(Coord(),Coord(),Coord(),Coord()) / tl/tr/bl/br'''
         if depth>self.max_depth: return
@@ -207,6 +210,8 @@ class FractalHeightmap(object):
                                                          #(inverse scaled to the  the depth of recurion)
                                                          #scaling down results in landscape smoothing out in the cracks,
                                                          #fairly good approx behaviour for water erosion
+                                                         #do we need it for this application? (ie not rly
+                                                         # a landscape, just some data of this structure)
             self.grid.make(center,avg+offset)
         
         #top_c
@@ -255,70 +260,14 @@ class FractalHeightmap(object):
 #        self.grid.logscaled(15)
 
 
-import threading
-class OSCFractgrid(threading.Thread):
-    
-    def __init__(self,grid_size,roughness,zoom,inter_grid_gap,
-                  osc_rate,osc_emitters,
-                  starting_corners=None,zoom_steps=4,center_val_range=None,corner_seed_ranges=None):
-        threading.Thread.__init__(self)
-        self.sleep_time=(1000.0/osc_rate)/1000.0
-        self.zoom=zoom
-        self.inter_grid_sleep=inter_grid_gap
-        self.grid_size=grid_size
-        self.grid=Grid(grid_size+1,grid_size+1)
-        self.osc_emitters=osc_emitters
-        self.target=target
-        self.corner_seed_ranges=corner_seed_ranges
-        self.center_val_range=center_val_range
-        self.roughness=roughness
-        self.fractal_heightmap=FractalHeightmap(self.grid,1,self.roughness,max_depth=sqrt(self.grid_size),
-                                        center_val_range=self.center_val_range,corner_seed_ranges=self.corner_seed_ranges)#sqrt because spatial doubling of point data
-        self.zoom_steps=zoom_steps
-        
-    def run(self):
-        ctr=1
-        while True:
-            #init
-            start=datetime.datetime.now()
-            if ctr % self.zoom_steps==0:
-                print 'NEW GRID'
-                print 'CSRs',self.corner_seed_ranges
-                self.fractal_heightmap=FractalHeightmap(self.grid,1,self.roughness,max_depth=sqrt(self.grid_size),
-                                                        corner_seed_ranges=self.corner_seed_ranges,center_val_range=self.center_val_range,
-                                                        )#sqrt because spatial doubling of point data
-            else:
-                self.fractal_heightmap.zoom(self.zoom)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
-                                                       #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
-                print "FINISHED ZOOMING"
-                self.fractal_heightmap.grid.render()
-            for y in xrange(0,self.fractal_heightmap.grid.size_y):
-                for x in xrange(0,self.fractal_heightmap.grid.size_x):
-                    [ osc_emitter.message.clearData() for osc_emitter in self.osc_emitters ]
-                    
-                    [ [ osc_emitter.message.append(n)
-                        for n in
-                    ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) ]
-                      for osc_emitter in self.osc_emitters ]
-                    
-                    #send
-                    [ osc_emitter.send() for osc_emitter in self.osc_emitters ]
-                    sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
-            #render
-            self.fractal_heightmap.grid.render()
-            ctr+=1
-            ##
-            sleep(self.inter_grid_sleep)
-            end=datetime.datetime.now()
-            print '(estimated) Init+Calc+Send+Render+grid_sleep time',end-start
-            print '\n\n'
+
 
 
 
     
     
     
-if __name__ == '__main__': 
+
 
 
     
