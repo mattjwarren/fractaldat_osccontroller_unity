@@ -8,7 +8,6 @@ from my_pyOSC import OSCClient, OSCMessage
 
 from my_pyOSC import OSCServer
 from threading import Thread
-
 from collections import namedtuple
 
 IPAddr=namedtuple('IPAddr','ip port')
@@ -42,6 +41,7 @@ class OSCSender(OSCClient):
 
 
 if __name__=='__main__':
+    from random import randint
     test_ip=IPAddr('192.168.0.3',8002)
     test_emitter=OSCSender('/test',test_ip)
     
