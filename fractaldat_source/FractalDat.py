@@ -206,7 +206,7 @@ class FractalHeightmap(object):
                     )/4.0  ###NOTE, we can choose to use the current corners, the new edge-centers, or all
                     #currenty we use the current corners
                     #then do the edge centers using only the edge corners, not the new center
-            offset=((random.random())-.5)*self.roughness #'they' have mentioned needing a scaled constant 
+            offset=(((random.random())-.5)*self.roughness)#*(1/depth) #'they' have mentioned needing a scaled constant 
                                                          #(inverse scaled to the  the depth of recurion)
                                                          #scaling down results in landscape smoothing out in the cracks,
                                                          #fairly good approx behaviour for water erosion

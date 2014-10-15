@@ -72,13 +72,9 @@ class OSCFractgrid(threading.Thread):
                     #a fault line of flow
                     #(...) is a generator comprehension NOT an expression
                     [ osc_emitter.message.clearData() for osc_emitter in self.osc_emitters ]
-                    [ ( osc_emitter.message.append(n)
-                        for n in
-                            ( x,y,self.fractal_heightmap.grid.get(Coord(x,y)) ) )#named tuples are slow 
-                                                                                 #TODO: change it
-                        for osc_emitter in 
-                            self.osc_emitters ]
-                    
+                    for osc_emitter in self.osc_emitters:
+                        osc_emitter.message.append(( x,y,
+                                                     self.fractal_heightmap.grid.get(Coord(x,y)) ))                    
                     [ osc_emitter.send() for osc_emitter in self.osc_emitters ]
                     sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
             after=datetime.datetime.now()
@@ -105,23 +101,36 @@ class FractalDat_Controller(threading.Thread):
         self.bind_ip=bind_ip
         self.send_targets=send_targets
         self.receive_port=receive_port
-        
-        self.setup_server()
+
+        self.setup_defaults()
+
         self.osc_emitters=list()
         self.setup_emitters()
-        self.setup_defaults()
+
+        self.osc_fgrid=OSCFractgrid(self.g_size,
+                            self.roughness,
+                            self.zoom,
+                            self.inter_grid_sleep,
+                            self.osc_rate,
+                            self.osc_emitters,
+                            zoom_steps=self.zoom_steps,
+                            center_val_range=self.center_val_range,
+                            corner_seed_ranges=self.corner_seed_ranges)
+
+        self.setup_server()
+        
 
         
     def setup_defaults(self):
         self.g_size=32 #controllerd
-        self.roughness=0#80 ##controllerd
+        self.roughness=25#80 ##controllerd
         self.osc_rate=300 #controlerd
-        self.corner_seed_ranges=[( 0,360),(360,360),
-                            (0,360),(360,360)] #all controllerd
+        self.corner_seed_ranges=[( 00,250),(0,250),
+                            (00,250),(0,250)] #all controllerd
         self.zoom=.75
-        self.inter_grid_sleep=30
-        self.center_val_range=(0,0)#controllered
-        self.zoom_steps=2
+        self.inter_grid_sleep=2
+        self.center_val_range=(0,250)#controllered
+        self.zoom_steps=4
               
         
     def setup_server(self):
@@ -193,13 +202,13 @@ class FractalDat_Controller(threading.Thread):
         def ctrl_ctr_min(_a,_b,data,_d):
             print "Setting ctr_min to ",data[0]
             #eclipse doesn't like this pattern of access but is easier to read than; cmax=self.osc_fgrid.center_val_range[1]
-            cmin,cmax=self.osc_fgrid.center_val_range
+            _cmin,cmax=self.osc_fgrid.center_val_range
             cmin=float(data[0])
             self.osc_fgrid.center_val_range=(cmin,cmax)
             
         def ctrl_ctr_max(_a,_b,data,_d):
             print "Setting ctr_max to ",data[0]
-            cmin,cmax=self.osc_fgrid.center_val_range
+            cmin,_cmax=self.osc_fgrid.center_val_range
             cmax=float(data[0])
             self.osc_fgrid.center_val_range=(cmin,cmax)
  
@@ -231,24 +240,15 @@ class FractalDat_Controller(threading.Thread):
         
     def run(self):
         print "starting fractgrid"
-        self.osc_fgrid=OSCFractgrid(self.g_size,
-                                    self.roughness,
-                                    self.zoom,
-                                    self.inter_grid_sleep,
-                                    self.osc_rate,
-                                    self.osc_emitters,
-                                    zoom_steps=self.zoom_steps,
-                                    center_val_range=self.center_val_range,
-                                    corner_seed_ranges=self.corner_seed_ranges)
         print "actualyll starting"
         self.osc_fgrid.start()
       
         
 if __name__ == '__main__': 
         print "Creating the_machine."
-        the_machine=FractalDat_Controller([('10.114.171.146',8002,'FractGrid'),
+        the_machine=FractalDat_Controller([('192.168.32.1',8002,'/FractGrid'),
                                            ],
-                                          13579,'127.0.0.1')
+                                          13579,'192.168.32.128')
         print "the_machine is created. I will start it now."
         the_machine.start()
         print "the_machine has started."
