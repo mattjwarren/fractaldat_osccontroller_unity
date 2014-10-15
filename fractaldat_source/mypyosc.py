@@ -4,8 +4,8 @@ Created on 18 Jul 2014
 @author: matthew
 ''' 
 from time import sleep
-from my_pyOSC import OSCClient, OSCMessage
-
+from my_pyOSC import OSCClient, OSCMessage, OSCClientError
+import socket
 from my_pyOSC import OSCServer
 from threading import Thread
 from collections import namedtuple
@@ -37,9 +37,11 @@ class OSCSender(OSCClient):
         self.connect(ip_addr)
 
     def send(self):
-        OSCClient.send(self,self.message)
-
-
+        try:
+            OSCClient.send(self,self.message)
+        except OSCClientError, e:
+            raise e
+            
 if __name__=='__main__':
     from random import randint
     test_ip=IPAddr('192.168.0.3',8002)

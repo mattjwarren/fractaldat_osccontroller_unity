@@ -3,7 +3,8 @@ from FractalDat import FractalHeightmap, Grid
 import threading
 from math import sqrt,log
 import datetime
-
+import socket
+from my_pyOSC import  OSCClientError
 
 Coord=namedtuple('Coord','x y')
 Corners=namedtuple('Corners','tl tr bl br')
@@ -49,24 +50,14 @@ class OSCFractgrid(threading.Thread):
             #init
             start=datetime.datetime.now()
             if ctr % self.zoom_steps==0:
-                print 'NEW HEIGHTMAP'
-                before=datetime.datetime.now()
                 self.fractal_heightmap=FractalHeightmap(self.grid,1,self.roughness,max_depth=sqrt(self.grid_size),
                                                         corner_seed_ranges=self.corner_seed_ranges,center_val_range=self.center_val_range,
                                                         )#sqrt because spatial doubling of point data
-                after=datetime.datetime.now()
-                print "FINISHED HEIGHTMAP",(after-before)
             else:
-                print "ZOOMING"
-                before=datetime.datetime.now()
                 self.fractal_heightmap.zoom(self.zoom)#parameter is perecnt size of original grid, zoom is a stretched subgrid of that size, centered, and scaled out to fit the
                                                       #base grid with gaps generated fractally from the points that did exist :::::::::::: generated fractally from the points that did exist  NNEEDDS MOOREE EXPLAANATION
-                after=datetime.datetime.now()
-                print "FINISHED ZOOMING",(after-before)
                 
                 self.fractal_heightmap.grid.render()
-            print "SENDING"
-            before=datetime.datetime.now()
             for y in xrange(0,self.fractal_heightmap.grid.size_y):
                 for x in xrange(0,self.fractal_heightmap.grid.size_x):
                     #a fault line of flow
@@ -74,23 +65,22 @@ class OSCFractgrid(threading.Thread):
                     [ osc_emitter.message.clearData() for osc_emitter in self.osc_emitters ]
                     for osc_emitter in self.osc_emitters:
                         osc_emitter.message.append(( x,y,
-                                                     self.fractal_heightmap.grid.get(Coord(x,y)) ))                    
-                    [ osc_emitter.send() for osc_emitter in self.osc_emitters ]
+                                                     self.fractal_heightmap.grid.get(Coord(x,y)) ))  
+                    for osc_emitter in self.osc_emitters:
+                        try:
+                            osc_emitter.send()
+                        except OSCClientError, e:
+                            print "OSCClientError: %s" % str(e)
                     sleep(self.sleep_time)#roughly approximates target_rate considering sleep is approximate and other execution time. real rate will always be a little slower
-            after=datetime.datetime.now()
-            print "FINISHED SENDING",(after-before)
             
             #render
             self.fractal_heightmap.grid.render()
             ctr+=1
             ##
-            print "SLEEPING"
             before=datetime.datetime.now()
             sleep(self.inter_grid_sleep)
             after=datetime.datetime.now()
-            print "FINISHED SLEEPING",(after-before)
             end=datetime.datetime.now()
-            print '(estimated) Init+Calc+Send+Render+grid_sleep time',end-start
             print '\n\n'
             
             
@@ -231,16 +221,12 @@ class FractalDat_Controller(threading.Thread):
                        for controller in controllers]
         osc_srv=OSCReceiver(self.receive_port, controllers,self.bind_ip)    
         osc_srv.start()
-        print "setup server"
 
     def setup_emitters(self):
         for ip,port,target in self.send_targets:
             self.osc_emitters.append(OSCSender(target,(ip,port)))
-        print "setup emitters"
         
     def run(self):
-        print "starting fractgrid"
-        print "actualyll starting"
         self.osc_fgrid.start()
       
         

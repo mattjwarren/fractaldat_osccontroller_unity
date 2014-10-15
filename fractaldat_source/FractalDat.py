@@ -32,7 +32,7 @@ class Grid(object):
                       Coord(0,self.size_y-1),Coord(self.size_x-1,self.size_y-1))
         
         self._data=[ [0 for _ in xrange(x)] for _ in xrange(y) ]
-        print "NEW GRID CREATED"
+
         
     def _render_to_text(self):
         for row in self._data:
@@ -123,15 +123,13 @@ class FractalHeightmap(object):
         self.max_depth=max_depth
         self._set_initial_corners(corner_seed_ranges,center_val_range)
         self.roughness=roughness
-        print "STARTING NEW HEIGHTMAP"
-        before=datetime.datetime.now()
+
         self.generate_heightmap([Coord(0,0),###############EDIED OUT MINNUS ONES FRM size parm exp[ressions
                                  Coord(self.grid.size_x-1,0),
                                  Coord(0,self.grid.size_y-1),
                                  Coord(self.grid.size_x-1,self.grid.size_y-1)],1
                                 )
-        after=datetime.datetime.now()
-        print "FINISHED NEW HEIGHTMAP",(after-before)
+
 
     #currently performs centered subgrid zoom, subgrid size expressed as percentage
     def zoom(self,subgrid_size):
