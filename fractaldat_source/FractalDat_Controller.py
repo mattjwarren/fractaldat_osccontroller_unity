@@ -81,7 +81,6 @@ class OSCFractgrid(threading.Thread):
             sleep(self.inter_grid_sleep)
             after=datetime.datetime.now()
             end=datetime.datetime.now()
-            print '\n\n'
             
             
 class FractalDat_Controller(threading.Thread):
@@ -118,7 +117,7 @@ class FractalDat_Controller(threading.Thread):
         self.corner_seed_ranges=[( 00,250),(0,250),
                             (00,250),(0,250)] #all controllerd
         self.zoom=.75
-        self.inter_grid_sleep=2
+        self.inter_grid_sleep=15#controllered
         self.center_val_range=(0,250)#controllered
         self.zoom_steps=4
               
@@ -201,6 +200,11 @@ class FractalDat_Controller(threading.Thread):
             cmin,_cmax=self.osc_fgrid.center_val_range
             cmax=float(data[0])
             self.osc_fgrid.center_val_range=(cmin,cmax)
+
+        def ctrl_inter_grid_sleep(_a,_b,data,_d):
+            print "Setting inter_grid_sleep to ",data[0]
+            osc_fgrid.inter_grid_sleep=float(data[0])
+
  
         controllers={'ctrl_roughness_handler':ctrl_roughness_handler,
                      'ctrl_tl_min':ctrl_tl_min,
@@ -214,7 +218,8 @@ class FractalDat_Controller(threading.Thread):
                      'ctrl_ctr_min':ctrl_tl_min,
                      'ctrl_ctr_max':ctrl_tl_min,
                      'ctrl_g_size':ctrl_g_size,
-                     'ctrl_osc_rate':ctrl_osc_rate,                     
+                     'ctrl_osc_rate':ctrl_osc_rate,  
+                     'ctrl_inter_grid_sleep':ctrl_inter_grid_sleep,                   
                      }
  
         controllers=[('/'+controller, controllers[controller])
@@ -232,9 +237,14 @@ class FractalDat_Controller(threading.Thread):
         
 if __name__ == '__main__': 
         print "Creating the_machine."
-        the_machine=FractalDat_Controller([('192.168.32.1',8002,'/FractGrid'),
-                                           ],
-                                          13579,'192.168.32.128')
+        send_to=[('77.101.65.99',8002,'/FractGrid'),
+                 ('192.168.0.8',8002,'/FractGrid')
+                 ]
+        
+        receive_at=[13579,'192.168.0.8']
+        
+        the_machine=FractalDat_Controller(send_to,
+                                           *receive_at)
         print "the_machine is created. I will start it now."
         the_machine.start()
         print "the_machine has started."
